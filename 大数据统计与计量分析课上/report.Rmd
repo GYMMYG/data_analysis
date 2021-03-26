@@ -1,0 +1,196 @@
+---
+title: "Teamwork"
+author: "GYM,HL,WYK"
+date: "2020/12/23"
+output: html_document
+---
+
+# 采用机器学习方法检测美国上市公司的会计欺诈行为
+　　通过read.csv读取**28个唯一的原始数据项**作为我们的欺诈预测模型的模型输入。
+28个变量包括：（1）“accruals quality-related variables”：九个变量；（2）“performance variables”：衡量一家公司各种财务业绩的五个变量；（3）“nonﬁnancial variables”：两个变量；（4） “off-balance-sheet variables”：四个；（5）“market-related incentives” variables：八个变量。<br />
+　　我们所有的欺诈预测模型都需要一个训练期和一个测试期。为了保证模型训练的可靠性，要求训练期超过10年。此外，我们要求在上一个培训年度的财务结果公告和一个测试年度的结果公告之间有24个月（即两年）的差距。我们这样做是因为最初披露欺诈行为平均需要大约24个月。因此，我们将1991-2001作为训练期，此时的数据作为训练集（train），而2003-2008年为测试期，此时数据为测试集（text）。并且设置随机数种子六个。
+
+## 使用LightGBM进行机器学习与预测
+　　**为了节省运行时间，这里只展示2003年的过程以及比较结果（迭代次数确定为500次。）**
+```{r}
+library(R6)
+library(lightgbm)
+library(ROCR)
+
+ori_data <- read.csv("D:/work/study/three 1/uscecchini28.csv",stringsAsFactors = F)
+#head(ori_data)
+
+gap <- 2   #the gap between training and testing periods, 2-year gap by default
+#设置随机数种子，六个
+set.seed(6)
+
+#如果要做2013-2018年的，则for (test_year in 2003:2008)
+for (test_year in 2003:2003) {
+  #train data
+  data_train <- ori_data[ori_data[,1] >= 1991 & ori_data[,1] <= test_year - gap,]
+  y_train <- data_train[,9]
+  X_train <- as.matrix(data_train[,10:37]) 
+  #head(X_train)
+  newpaaer_train <- data_train[,8]
+  
+  # 学习过程和结果
+  #test data
+  data_test <- ori_data[ori_data[,1] == test_year,]
+  y_test <- data_test[,9]
+  X_test <- as.matrix(data_test[,10:37]) 
+  newpapper_test <- unique(data_test[data_test[,9] != 0,8])#去除重复
+  #head(newpapper_test)
+  
+  #应对连续欺诈
+  num_frauds <- sum(y_train == 1)
+  y_train[newpaaer_train%in%newpapper_test] <- 0
+  num_frauds <- num_frauds - sum(y_train==1)
+  print(paste("num_frauds:",num_frauds))
+
+  classiftime1 <- proc.time()  # record classification time 
+  #train model
+  dtrain <- lgb.Dataset(X_train,label =(y_train))
+  dtest <- lgb.Dataset.create.valid(dtrain,data = X_test,label = (y_test)  )
+  valids <- list(eval = dtest, train = dtrain)
+  param <- list(
+     'metric' = 'auc'
+    ,num_leaves = 10L
+    , learning_rate = 0.01
+    , objective = "binary"
+  )
+  bst <- lgb.train(param, dtrain, nrounds = 500L, valids = valids)
+  t = proc.time() - classiftime1 
+  print("train_time:")
+  print(t) 
+  
+  classiftime1 <- proc.time()  # record classification time 
+  ptrain <- predict(bst, X_train)
+  ptest  <- predict(bst, X_test)
+  t = proc.time() - classiftime1 
+  print("test_time:")
+  print((t))
+  tree_imp <- lgb.importance(bst, percentage = TRUE)
+  lgb.plot.importance(tree_imp, top_n = 10L, measure = "Gain")
+  pred = prediction(ptest,y_test)
+  perf = performance(pred,"tpr","fpr")
+  auc = performance(pred,"auc")
+  auc = unlist(slot(auc,"y.values"))
+  #picname = paste("roc_",test_year,".png")
+  #png(file=picname, bg="white")
+  plot(perf,xlim = c(0,1),ylim = c(0,1),col="red",main = paste("test_year",test_year," ROC curve (","AUC:",auc,")"),lwd = 2)
+ 
+  #dev.off()
+}
+```
+
+### 展示2004-2008年的结果如下
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/lightgbm/roc_2004.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/lightgbm/roc_2005.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/lightgbm/roc_2006.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/lightgbm/roc_2007.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/lightgbm/roc_2008.png)
+
+## 使用Randomforest进行机器学习与预测
+```{r}
+library(randomForest)
+library(ROCR)
+library(tools)
+#Import data
+ori_data <- read.csv("D:/work/study/three 1/uscecchini28.csv",stringsAsFactors = F)
+#head(ori_data)
+set.seed(6)  #随机数种子
+
+#Model training(Take data from 2003 as an example)
+data_train <- ori_data[ori_data[,1] >= 2003 & ori_data[,1] <= 2003,]
+y_train <- data_train[,9]
+rate <- 1
+#确定mtry的最优值
+for(i in 1:28){
+  set.seed(1234)
+  rf_train <- randomForest(as.factor(y_train)~ .,data = data_train[,9:37],
+                           ntree = 100, mtry = i)  #两个参数 mtry 1-28 取最优
+  rate[i]<-mean(rf_train$err.rate[1])   #Calculate the mean error rate of the model based on OOB
+  print(rf_train)    
+}
+#plot the error rate for each mtry
+#plot(rate, type = "b", main ="the error rate for each mtry")
+
+#choose the ntree
+rf_train <- randomForest(as.factor(y_train)~ .,data = data_train[,9:37],
+                         ntree = 1000, mtry = 8)
+#plot(rf_train)  #500后基本无变化
+
+
+#Formal Training
+gap <- 2   #the gap between training and testing periods, 2-year gap by default
+
+#如果要做2013-2018年的，则for (test_year in 2003:2008)
+for (test_year in 2003:2003) {
+  #train data
+  data_train <- ori_data[ori_data[,1] >= 1998 & ori_data[,1] <= test_year - gap,]
+  y_train <- data_train[,9]
+  X_train <- data_train[,10:37]
+  #head(X_train)
+  newpaaer_train <- data_train[,8]
+  
+  # test data
+  data_test <- ori_data[ori_data[,1] == test_year,]
+  y_test <- data_test[,9]
+  X_test <- (data_test[,10:37])
+  newpapper_test <- unique(data_test[data_test[,9] != 0,8])
+  head(newpapper_test)
+  num_frauds <- sum(y_train == 1)
+  y_train[newpaaer_train%in%newpapper_test] <- 0
+  num_frauds <- num_frauds - sum(y_train==1)
+  print(paste("num_frauds:",num_frauds))
+  
+  classiftime1 <- proc.time()  # record classification time 
+  #train model
+  data.rf <- randomForest(as.factor(y_train)~ .,data = data_train[,10:37],
+                          ntree = 500, mtry = 8)
+  #data.rf$importance
+  
+  
+  ptest = predict(object = data.rf,newdata = X_test,type = "prob")[,2]
+  ptest
+  #MDSplot(data.rf, data.rf$misstate)
+  t = proc.time() - classiftime1   #时间
+  print("train_time:")
+  print(t) 
+  pred = prediction(ptest,y_test)
+  perf = performance(pred,"tpr","fpr")
+  auc = performance(pred,"auc")
+  auc = unlist(slot(auc,"y.values"))
+  #plot(perf,xlim = c(0,1),ylim = c(0,1),col="red",main = paste("test_year",test_year," ROC curve (","AUC:",auc,")"),lwd = 2)
+}
+```
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2003.png)。
+
+### mtry最优值的选择原因
+通过下图分析得到最优的mtry为8，因为此时**Index和rate均比较小**。
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/the error rate of each mtry.png)
+
+### nreee的选择原因
+由下图可以看出当trees多于50的情况下error就基本持平了，故这里的ntrees选500足够。
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/ntrees.png)
+
+### 展示2004-2008年的结果如下
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2004.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2005.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2006.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2007.png)
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/randomforest/2008.png)
+
+## Matlab运行结果（论文方式）
+![avatar](D:/work/study/three 1/数据分析语言基础/大作业1/matlab.png)。
+
+## 时间比较
+
+　　通过上述结果，对于2003年的数据分别使用LightGBM和Randomforest进行学习的train_time是14.21,58.75。**明显可以得到前者耗时更短。**
+
+
+## auc比较
+　　LightGBM：auc = 0.7768<br />
+　　Randomforest：auc = 0.7027<br />
+　　Matlab = 0.7397<br />
+　　由此可见前两种方法与原文中方法在相同条件下，所得到的auc值相差在0.1内。

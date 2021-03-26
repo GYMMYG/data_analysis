@@ -1,0 +1,45 @@
+---
+title: "function"
+author: "gym"
+date: "2020/12/24"
+output: html_document
+---
+
+## funtion:add8 (Add a data in a column of length 7)
+```{r}
+add8 <- function(x) {
+  if(length(x) == 7) {
+    x[8] = " "
+  }
+  return (x)
+}
+```
+
+## function:wb (return data[,1:2] which data[,'Nfollowers' > 10000])
+```{r}
+WB <- function(filepa){
+  library(readr)
+  cnames <- c("name","location","gender","Nfollowers","Nfollow","Nweibo"
+                           ,"creatTime","description")
+  df <- readLines(filepa,encoding = "UTF-8")
+  
+  ddf <- strsplit(df," \t")
+  ll <- sapply(ddf,length)
+  ddf <- ddf[ ll >= 7 & ll <= 8]
+  ddf <- sapply(ddf,add8)
+  
+  tab <- data.frame(matrix(unlist(ddf),byrow = T,nrow = 100),stringsAsFactors = F)
+  names(tab) = cnames
+  
+  tabb <- tab[which(as.numeric(tab[,'Nfollowers']) > 10000),1:2]
+  head(tabb)
+  return (tabb)
+}
+```
+
+## main function
+```{r}
+result <- WB("D:/桌面/weibo.txt")
+head(result)
+```
+
