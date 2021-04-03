@@ -1,3 +1,7 @@
+[TOC]
+
+
+
 # note of numpy
 
 ## 小知识
@@ -110,6 +114,28 @@ x的值很少时更精确用法：exp(x) - 1:np.expm1(),log(1+x):np.log1p()
 
 
 
+import  numpy as np
+a=np.array([[1,1],
+			[0,1]])
+b=np.arange(4).reshape((2,2))
+c=a*b#两个同型矩阵对应元素的乘积
+c_dot=np.dot(a,b)#矩阵的乘法运算
+c_dot_2=a.dot(b) #矩阵ab的乘积
+print(c)
+print(c_dot)
+print(c_dot_2)
+
+
+
+a=np.array([[1,2,3],[2,3,4]])#shape=2x4
+print(a)                
+print(np.sum(a)) #15       
+print(np.max(a)) #4      
+print(np.min(a)) #1       
+print(np.sum(a,axis=1)) #行求和[6,9]
+print(np.sum(a,axis=0)) #列求和[3,5,7]
+print(np.max(a,axis=0)) #列最大[2,3,4]
+print(np.min(a,axis=1)) #行最小[1,2]
 
 
 ### 高级通用函数特性
