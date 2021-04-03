@@ -396,6 +396,22 @@ pd.contact():默认是按行
 
 ![image-20210402201607708](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210402201607708.png)
 
+![image-20210403095313292](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403095313292.png)
+
+![image-20210403101130610](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403101130610.png)
+
+![image-20210403101548679](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403101548679.png)
+
+
+
+![image-20210403090938930](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403090938930.png)
+
+![image-20210403091130640](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403091130640.png)
+
+![image-20210403091215996](C:\Users\gym\AppData\Roaming\Typora\typora-user-images\image-20210403091215996.png)
+
+
+
 ## eval,query
 
 
@@ -416,11 +432,14 @@ pd.contact():默认是按行
 
 
 
+## 基本函数
 
+https://zhuanlan.zhihu.com/p/106722583
 
+https://pypi.python.org/pypi/
 
-
-
+1.元素乘：`df1*df2`, `df1.mul(df2)`
+2.矩阵乘：`df1.dot(df2)`
 
 ```python
 cshf ={
@@ -434,11 +453,41 @@ for key,value in cshf.items():
     df.loc[df['医生所在城市'].isin(value),['城市等级']] = key
 ```
 
+```python
+#①使用字典进行映射
+data["gender"] = data["gender"].map({"男":1, "女":0})
+
+#②使用函数
+def gender_map(x):
+    gender = 1 if x == "男" else 0
+    return gender
+#注意这里传入的是函数名，不带括号
+data["gender"] = data["gender"].map(gender_map)
+```
+
+```text
+def apply_age(x,bias):
+    return x+bias
+
+#以元组的方式传入额外的参数
+data["age"] = data["age"].apply(apply_age,args=(-3,))
+```
+
+```text
+# 沿着0轴求和
+data[["height","weight","age"]].apply(np.sum, axis=0)
+
+# 沿着0轴取对数
+data[["height","weight","age"]].apply(np.log, axis=0)
+```
 
 
 
+现在想将`DataFrame`中所有的值保留两位小数显示，使用`applymap`可以很快达到你想要的目的，代码和图解如下：
 
-
+```pycon
+df.applymap(lambda x:"%.2f" % x)
+```
 
 ```python
 g_data.drop(['患者投票数','感谢信数','心意礼物数','Unnamed: 0'], axis=1, inplace=True)
@@ -459,4 +508,19 @@ origin_data.drop(origin_data.columns[x], axis=1, inplace=True)
 
 ```python
 g_data['profession_encoding'] = g_data['医生职称'].apply(lambda x:profession_transform(x))
+```
+
+```python
+In [28]: data.sort_values(by='salary')
+Out[28]:
+  company  salary  age
+1       A       8   41
+5       C      20   18
+7       B      25   23
+2       A      28   26
+4       A      33   26
+8       B      39   18
+3       C      42   28
+0     NaN      43   21
+6       A      48   43
 ```
