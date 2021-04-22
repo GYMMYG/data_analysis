@@ -438,6 +438,10 @@ https://zhuanlan.zhihu.com/p/106722583
 
 https://pypi.python.org/pypi/
 
+dataframe['xxx'].unique()
+
+.describle()
+
 1.元素乘：`df1*df2`, `df1.mul(df2)`
 2.矩阵乘：`df1.dot(df2)`
 
@@ -524,3 +528,67 @@ Out[28]:
 0     NaN      43   21
 6       A      48   43
 ```
+
+首先我们建立了一个函数，专门写入CSV文件的这样一个函数def csv_writer():
+
+这里我们首先把我们这份数据的键(表头)给取出来，这里我们用到了一个遍历算法，那么有的小伙伴就疑问了，为什么我不手动加入，写入啊，也就几行我copy就好了，但是我们考虑一下如果键有几十个的话，我们直接copy是不是显得有点不自动化了，Python就是可以解决办公难题，别用一个小时的时间，你只需要1分钟就好。a=[]
+
+dict=student_infos[0]
+
+for headers in sorted(dict.keys()):#把字典的键取出来
+
+a.append(headers)
+
+header=a#把列名给提取出来，用列表形式呈现
+
+这里的header是一个列表
+
+这里我打开了这个文件，准备写入，里面的参数我这里一一解释一下。
+
+** a表示以“追加”的形式写入，如果是“w”的话，表示在写入之前会清空原文件中的数据
+
+newline是数据之间不加空行
+
+encoding='utf-8'表示编码格式为utf-8，如果不希望在excel中打开csv文件出现中文乱码的话，将其去掉不写也行。
+
+为了不让pycharm里面的CSV文件乱码，我们这里用的参数编码为utf-8
+
+而excel文件编码格式是gbk，两者不兼容，建议加上encoding='utf-8'参数。
+
+如果不想excel中的csv文件乱码的话，建议将csv文件以记事本的方式打开，另存为ANSI格式即可。**with open('成绩更新.csv', 'a', newline='', encoding='utf-8') as f:
+
+writer = csv.DictWriter(f, fieldnames=header) # 提前预览列名，当下面代码写入数据时，会将其一一对应。
+
+writer.writeheader() # 写入列名
+
+writer.writerows(student_infos) # 写入数据
+
+print("数据已经写入成功！！！")
+
+
+
+
+
+
+
+
+
+shutdown={"yunfeiyang":{"username":"yunfeiyang","binding_house":{0:"1",1:"2"},"register_time":"2018-20"}}
+
+import csv
+
+csvfile = file('csvtest.csv', 'wb')
+
+writer = csv.writer(csvfile)
+
+writer.writerow(['username','binding_hourse','register_time'])
+
+list1=[]
+
+for i in shutdown.values():
+
+ s=tuple(list(i.values()))
+
+ list1.append(s)
+
+writer.writerows(list1)
